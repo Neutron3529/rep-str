@@ -1,18 +1,37 @@
 //! This is a crate for caching a repeat pattern of a str
 //! with only one allocation by generate a new `RepStr` struct
 //! this crate provides.
-//! # Examples
+//! # Example 1: Crate RepStr directly.
 //! ```rust
-//! let repstr = crate::RepStr::new("#", 50); // generate a RepStr object with max repeat time 50
-//! assert!(format!("{empty:#>width$}", empty = "", width = 20) == repstr.repeat_unwrap(20))
+//! use rep_str::RepStr;
+//! let repstr = rep_str::RepStr::new("#", 50); // generate a RepStr object with max repeat time 50
+//! assert!("##########" == repstr.repeat_unwrap(10));
+//! assert!("####################" == repstr.repeat_unwrap(20));
+//! // no extra allocation would occurs:
+//! assert!(repstr.repeat_unwrap(20).as_ptr() == repstr.repeat(12).unwrap().as_ptr())
+//! // repstr.repeat_unwrap(51) // panic!
 //! ```
-
+//! # Example 2: Crate RepStr by IntoRepStr trait
+//! ```rust
+//! use rep_str::IntoRepStr;
+//! let repstr = "🦀".repeat_cache(20);
+//! assert!(Some("🦀🦀🦀🦀🦀🦀🦀🦀🦀🦀🦀🦀🦀🦀🦀🦀🦀🦀🦀🦀") == repstr.repeat(20));
+//! assert!(None == repstr.repeat(21));
+//! ```
 #[cfg(test)]
 mod tests {
+    use crate::*;
     #[test]
-    fn it_works() {
-        let repstr = crate::RepStr::new("#", 50);
-        assert!(format!("{empty:#>width$}", empty = "", width = 20) == repstr.repeat_unwrap(20))
+    fn rep_str_new_and_repeat_unwrap() {
+        let repstr = RepStr::new("#", 50);
+        assert!(format!("{empty:#>width$}", empty = "", width = 20) == repstr.repeat_unwrap(20));
+        assert!(repstr.repeat_unwrap(20).as_ptr()==repstr.repeat(12).unwrap().as_ptr())
+    }
+    #[test]
+    fn rep_str_into_rep_str_check(){
+        let repstr = "#".repeat_cache(20);
+        assert!(format!("{empty:#>width$}", empty = "", width = 20) == repstr.repeat(20).unwrap());
+        assert!(None == repstr.repeat(21));
     }
 }
 /// The cache result for a repeatable string.
@@ -44,3 +63,12 @@ impl RepStr {
         }
     }
 }
+pub trait IntoRepStr{
+    fn repeat_cache(self,repeat:usize)->RepStr;
+}
+impl IntoRepStr for &str{
+    fn repeat_cache(self,repeat:usize)->RepStr{
+        RepStr::new(self,repeat)
+    }
+}
+
